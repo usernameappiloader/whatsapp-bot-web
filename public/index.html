@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Bot</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+    input, button { padding: 10px; margin: 10px; font-size: 16px; }
+    #result { margin-top: 20px; color: green; }
+    #error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Connecter le Bot WhatsApp</h1>
+  <input type="text" id="phoneNumber" placeholder="Entrez votre numéro (ex: +123456789)">
+  <button onclick="generatePairingCode()">Générer le Code</button>
+  <div id="result"></div>
+  <div id="error"></div>
+  <script>
+    async function generatePairingCode() {
+      const phoneNumber = document.getElementById('phoneNumber').value;
+      document.getElementById('result').innerText = '';
+      document.getElementById('error').innerText = '';
+      try {
+        const response = await fetch('/generate-pairing-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber })
+        });
+        const data = await response.json();
+        if (data.pairingCode) {
+          document.getElementById('result').innerText = `Votre code de couplage : ${data.pairingCode}\nEntrez ce code dans WhatsApp : Paramètres > Appareils connectés > Connecter avec numéro de téléphone`;
+        } else {
+          document.getElementById('error').innerText = data.error || 'Erreur inconnue';
+        }
+      } catch (err) {
+        document.getElementById('error').innerText = 'Erreur de connexion au serveur';
+      }
+    }
+  </script>
+</body>
+</html>
