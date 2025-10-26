@@ -1,8 +1,0 @@
-python-telegram-bot==21.0
-flask==3.0.0
-yt-dlp==2023.11.16
-instaloader==4.10.1
-gTTS==2.5.0
-qrcode[pil]==7.4.2
-requests==2.31.0
-google-play-scraper==1.2.4
